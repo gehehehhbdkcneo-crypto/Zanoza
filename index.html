@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zanoza AI Chat</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f0f0f; color: #e0e0e0; height: 100vh; display: flex; flex-direction: column; }
+        .header { background: #1a1a1a; padding: 12px 16px; border-bottom: 1px solid #2a2a2a; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+        .header h1 { font-size: 18px; font-weight: 600; color: #fff; }
+        .model-select { flex: 1; min-width: 200px; background: #2a2a2a; border: 1px solid #3a3a3a; color: #fff; padding: 8px 12px; border-radius: 6px; font-size: 14px; }
+        .model-select:focus { outline: none; border-color: #667eea; }
+        .files-btn { background: #2a2a2a; border: none; color: #fff; padding: 8px 12px; border-radius: 6px; font-size: 14px; cursor: pointer; }
+        .files-btn:active { background: #3a3a3a; }
+        .chat-container { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+        .message { display: flex; gap: 12px; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .message.user { flex-direction: row-reverse; }
+        .message-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px; }
+        .message.user .message-avatar { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .message-content { max-width: 75%; background: #1a1a1a; padding: 12px 16px; border-radius: 12px; line-height: 1.6; font-size: 15px; }
+        .message.user .message-content { background: #2a2a2a; }
+        .message-content pre { background: #0a0a0a; padding: 12px; border-radius: 6px; overflow-x: auto; margin: 8px 0; font-size: 13px; border: 1px solid #2a2a2a; }
+        .message-content code { background: #0a0a0a; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+        .message-content pre code { background: none; padding: 0; }
+        .message-images { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+        .message-image { max-width: 200px; max-height: 200px; border-radius: 8px; cursor: pointer; border: 2px solid #2a2a2a; }
+        .message-image:hover { border-color: #667eea; }
+        .typing-indicator { display: flex; gap: 4px; padding: 12px; }
+        .typing-dot { width: 8px; height: 8px; background: #667eea; border-radius: 50%; animation: typing 1.4s infinite; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typing { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-10px); } }
+        .input-area { background: #1a1a1a; border-top: 1px solid #2a2a2a; padding: 12px 16px; }
+        .attached-images { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+        .attached-image-preview { position: relative; width: 80px; height: 80px; }
+        .attached-image-preview img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; border: 2px solid #3a3a3a; }
+        .remove-image { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; background: #dc3545; border: none; border-radius: 50%; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+        .input-controls { display: flex; gap: 8px; }
+        .input-wrapper { flex: 1; position: relative; }
+        #messageInput { width: 100%; background: #2a2a2a; border: 1px solid #3a3a3a; color: #fff; padding: 12px 48px 12px 12px; border-radius: 8px; font-size: 15px; resize: none; max-height: 120px; font-family: inherit; }
+        #messageInput:focus { outline: none; border-color: #667eea; }
+        .attach-btn { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #888; cursor: pointer; padding: 6px; border-radius: 4px; font-size: 18px; }
+        .attach-btn:hover { color: #667eea; }
+        .send-btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; color: #fff; padding: 0 20px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; min-width: 70px; }
+        .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); z-index: 1000; }
+        .modal.active { display: flex; align-items: center; justify-content: center; }
+        .modal-content { background: #1a1a1a; border-radius: 12px; padding: 24px; max-width: 90%; max-height: 80vh; overflow-y: auto; min-width: 300px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .close-btn { background: none; border: none; color: #888; font-size: 24px; cursor: pointer; }
+        .file-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+        .file-item { background: #2a2a2a; padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .file-name { font-weight: 500; }
+        .file-size { font-size: 12px; color: #888; }
+        .file-actions { display: flex; gap: 8px; }
+        .btn-sm { background: #3a3a3a; border: none; color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+        .btn-danger { background: #dc3545; }
+        .upload-area { border: 2px dashed #3a3a3a; border-radius: 8px; padding: 24px; text-align: center; cursor: pointer; }
+        .upload-area:hover { border-color: #667eea; }
+        .empty-state { text-align: center; padding: 40px; color: #666; }
+        .image-viewer { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.95); z-index: 2000; align-items: center; justify-content: center; }
+        .image-viewer.active { display: flex; }
+        .image-viewer img { max-width: 90%; max-height: 90%; border-radius: 8px; }
+        @media (max-width: 768px) { .message-content { max-width: 85%; } .model-select { min-width: 150px; font-size: 13px; } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔥 Zanoza AI</h1>
+        <select class="model-select" id="modelSelect"><option value="">Загрузка...</option></select>
+        <button class="files-btn" onclick="openFiles()">📁 Файлы</button>
+    </div>
+    <div class="chat-container" id="chatContainer"></div>
+    <div class="input-area">
+        <div id="attachedImages" class="attached-images"></div>
+        <div class="input-controls">
+            <div class="input-wrapper">
+                <textarea id="messageInput" placeholder="Напиши сообщение..." rows="1" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
+                <input type="file" id="imageInput" hidden accept="image/*" multiple onchange="handleImageSelect()">
+                <button class="attach-btn" onclick="document.getElementById('imageInput').click()">📎</button>
+            </div>
+            <button class="send-btn" id="sendBtn" onclick="sendMessage()">Отправить</button>
+        </div>
+    </div>
+    <div class="modal" id="filesModal">
+        <div class="modal-content">
+            <div class="modal-header"><h2>Файлы сессии</h2><button class="close-btn" onclick="closeFiles()">×</button></div>
+            <div id="filesList" class="file-list"></div>
+            <input type="file" id="fileInput" hidden onchange="handleFileUpload()">
+            <div class="upload-area" onclick="document.getElementById('fileInput').click()"><div>📤 Загрузить файл</div></div>
+        </div>
+    </div>
+    <div class="image-viewer" id="imageViewer" onclick="closeImageViewer()"><img id="viewerImage" src="" alt=""></div>
+    <script>
+let sessionId = localStorage.getItem('sessionId');
+if (!sessionId) { sessionId = crypto.randomUUID(); localStorage.setItem('sessionId', sessionId); }
+let isStreaming = false, availableModels = [], visionModels = [], attachedImages = [];
+async function loadModels() {
+    try {
+        const response = await fetch('/models');
+        const data = await response.json();
+        availableModels = data.models || [];
+        visionModels = data.visionModels || [];
+        const select = document.getElementById('modelSelect');
+        select.innerHTML = availableModels.map(model => `<option value="${model.id || model.name}">${model.name || model.id}</option>`).join('');
+        console.log('✅ Модели загружены:', availableModels.length, 'обычных,', visionModels.length, 'vision');
+    } catch (error) { console.error('Ошибка загрузки моделей:', error); }
+}
+function handleImageSelect() {
+    const input = document.getElementById('imageInput');
+    Array.from(input.files).forEach(file => {
+        if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                attachedImages.push({ data: e.target.result, name: file.name });
+                updateAttachedImagesPreview();
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+    input.value = '';
+}
+function updateAttachedImagesPreview() {
+    const container = document.getElementById('attachedImages');
+    container.innerHTML = attachedImages.map((img, idx) => `<div class="attached-image-preview"><img src="${img.data}" alt="${img.name}"><button class="remove-image" onclick="removeAttachedImage(${idx})">×</button></div>`).join('');
+}
+function removeAttachedImage(index) { attachedImages.splice(index, 1); updateAttachedImagesPreview(); }
+function autoResize(textarea) { textarea.style.height = 'auto'; textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px'; }
+function handleKeyDown(event) { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); } }
+function addMessage(text, isUser = false, images = null) {
+    const chatContainer = document.getElementById('chatContainer');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${isUser ? 'user' : 'assistant'}`;
+    let imagesHtml = '';
+    if (images && images.length > 0) imagesHtml = `<div class="message-images">${images.map(img => `<img class="message-image" src="${img.data}" onclick="viewImage('${img.data}')" alt="${img.name}">`).join('')}</div>`;
+    messageDiv.innerHTML = `<div class="message-avatar">${isUser ? '👤' : '🤖'}</div><div class="message-content">${formatMessage(text)}${imagesHtml}</div>`;
+    chatContainer.appendChild(messageDiv);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    return messageDiv;
+}
+function viewImage(src) { document.getElementById('viewerImage').src = src; document.getElementById('imageViewer').classList.add('active'); }
+function closeImageViewer() { document.getElementById('imageViewer').classList.remove('active'); }
+function formatMessage(text) {
+    text = text.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => `<pre><code>${escapeHtml(code.trim())}</code></pre>`);
+    text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+    text = text.replace(/\n/g, '<br>');
+    return text;
+}
+function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
+function addTypingIndicator() {
+    const chatContainer = document.getElementById('chatContainer');
+    const typingDiv = document.createElement('div');
+    typingDiv.className = 'message assistant';
+    typingDiv.id = 'typingIndicator';
+    typingDiv.innerHTML = '<div class="message-avatar">🤖</div><div class="message-content"><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>';
+    chatContainer.appendChild(typingDiv);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+function removeTypingIndicator() { const indicator = document.getElementById('typingIndicator'); if (indicator) indicator.remove(); }
+async function sendMessage() {
+    const input = document.getElementById('messageInput');
+    const message = input.value.trim();
+    const model = document.getElementById('modelSelect').value;
+    if (!message && attachedImages.length === 0) return;
+    if (isStreaming) return;
+    const userImages = [...attachedImages];
+    addMessage(message || 'Что на этих картинках?', true, userImages);
+    input.value = '';
+    autoResize(input);
+    isStreaming = true;
+    document.getElementById('sendBtn').disabled = true;
+    input.disabled = true;
+    addTypingIndicator();
+    try {
+        const requestBody = { message: message || 'Опиши что на этих изображениях', model, sessionId };
+        if (attachedImages.length > 0) requestBody.images = attachedImages.map(img => img.data);
+        const response = await fetch('/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) });
+        removeTypingIndicator();
+        const assistantMsg = addMessage('', false);
+        const contentDiv = assistantMsg.querySelector('.message-content');
+        let fullText = '';
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n').filter(line => line.trim());
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const data = line.slice(6);
+                    if (data === '[DONE]') break;
+                    try {
+                        const parsed = JSON.parse(data);
+                        if (parsed.text) { fullText += parsed.text; contentDiv.innerHTML = formatMessage(fullText); }
+                        if (parsed.error) contentDiv.innerHTML = `<span style="color: #dc3545;">❌ ${parsed.error}</span>`;
+                    } catch (e) {}
+                }
+            }
+        }
+        attachedImages = [];
+        updateAttachedImagesPreview();
+    } catch (error) { removeTypingIndicator(); addMessage(`❌ Ошибка: ${error.message}`, false); }
+    finally { isStreaming = false; document.getElementById('sendBtn').disabled = false; input.disabled = false; input.focus(); }
+}
+async function openFiles() { document.getElementById('filesModal').classList.add('active'); await loadFiles(); }
+function closeFiles() { document.getElementById('filesModal').classList.remove('active'); }
+async function loadFiles() {
+    try {
+        const response = await fetch(`/files/${sessionId}`);
+        const files = await response.json();
+        const filesList = document.getElementById('filesList');
+        if (files.length === 0) { filesList.innerHTML = '<div class="empty-state">Нет файлов</div>'; return; }
+        filesList.innerHTML = files.map(file => `<div class="file-item"><div class="file-info"><div class="file-name">📄 ${file.name}</div><div class="file-size">${formatSize(file.size)}</div></div><div class="file-actions">${file.name.endsWith('.py') ? `<button class="btn-sm" onclick="runPython('${file.name}')">▶️ Run</button>` : ''}<button class="btn-sm btn-danger" onclick="deleteFile('${file.name}')">🗑️</button></div></div>`).join('');
+    } catch (error) { console.error('Load files error:', error); }
+}
+function formatSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+async function handleFileUpload() {
+    const fileInput = document.getElementById('fileInput');
+    const file = fileInput.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('sessionId', sessionId);
+    try {
+        const response = await fetch('/upload', { method: 'POST', body: formData });
+        const result = await response.json();
+        if (!result.error) await loadFiles();
+    } catch (error) { console.error('Upload error:', error); }
+    fileInput.value = '';
+}
+async function deleteFile(filename) {
+    if (!confirm(`Удалить ${filename}?`)) return;
+    try { await fetch(`/files/${sessionId}/${filename}`, { method: 'DELETE' }); await loadFiles(); }
+    catch (error) { console.error('Delete error:', error); }
+}
+async function runPython(filename) {
+    try {
+        const response = await fetch('/run-python', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId, filename }) });
+        const result = await response.json();
+        if (result.error) addMessage(`❌ Ошибка ${filename}:\n${result.error}`, false);
+        else addMessage(`✅ Результат ${filename}:\n${result.output}`, false);
+        closeFiles();
+    } catch (error) { console.error('Run error:', error); }
+}
+document.getElementById('filesModal').addEventListener('click', (e) => { if (e.target.id === 'filesModal') closeFiles(); });
+loadModels();
+addMessage('Привет! 👋 Выбери модель, отправь текст или прикрепи картинку!', false);
+    </script>
+</body>
+</html>

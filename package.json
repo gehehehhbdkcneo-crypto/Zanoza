@@ -1,0 +1,18 @@
+{
+  "name": "zanoza-ai-chat",
+  "version": "2.0.0",
+  "description": "AI Chat с io.nет + файловый менеджер",
+  "main": "chat-server.js",
+  "scripts": {
+    "start": "node chat-server.js"
+  },
+  "keywords": ["ai", "chat", "io.net", "streaming"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "express-fileupload": "^1.4.0",
+    "archiver": "^6.0.1",
+    "uuid": "^9.0.0"
+  }
+}
