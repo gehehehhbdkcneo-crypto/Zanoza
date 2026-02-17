@@ -7,7 +7,22 @@ const archiver = require('archiver');
 const { v4: uuidv4 } = require('uuid');
 
 const app = express();
-const port = 3000;
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, async () => {
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('🔥 Zanoza AI Chat v2.0');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log(`🌐 Server running on port ${PORT}`);
+    console.log(`📁 Workspace: ${WORKSPACE}`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
+    await loadModels();
+    
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('✅ Сервер запущен!');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+});
 
 // API Configuration
 const API_KEY = "io-v2-eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJvd25lciI6ImI3NTAyMmRmLTZmYjQtNDEzZC1hZDhmLThiNmI0OGExYjA0NSIsImV4cCI6NDkyNDgzOTUzMn0.Els2ChbqMNbHNwGDhtolIVkEvmaV6dIgonKl1RuZyhbNaCEA1Z9EkciXC9ZAQsqTZVeHv56kMr6TJZCGMPzOvg";
